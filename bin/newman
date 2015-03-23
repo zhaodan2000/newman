@@ -17,7 +17,8 @@ var color   = require('cli-color'),
 	Errors  = require('../src/utilities/ErrorHandler'),
 	JSON5   = require('json5'),
 	Globals = require('../src/utilities/Globals'),
-	Newman  = require('../src/Newman');
+	Newman  = require('../src/Newman'),
+    NewmanSyncDownloader = require('../src/sync/NewmanSyncDownloader');
 
 
 
@@ -101,6 +102,21 @@ function parseArguments() {
 }
 
 function main() {
+    //handle sync call
+    //newman sync -u username
+    if(process.argv.length == 6) {
+        if(process.argv[2]==="sync") {
+            console.log("Initiating sync");
+            var username = null;
+            if(process.argv[3]==='-u') {
+                username = process.argv[4];
+            }
+            var syncDownloader = new NewmanSyncDownloader(username);
+            syncDownloader.begin();
+            return;
+        }
+    }
+
 	parseArguments();
 
 	newmanOptions = {};
