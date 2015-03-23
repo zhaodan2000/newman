@@ -1,6 +1,8 @@
 var jsface          = require("jsface"),
-    request = require('request'),
-    prompt = require('prompt');
+    request         = require('request'),
+    fs              = require('fs-extra'),
+    _und            = require('underscore'),
+    prompt          = require('prompt');
 
 /**
  * @name NewmanSyncDownloader
@@ -28,7 +30,7 @@ var NewmanSyncDownloader = jsface.Class({
         }
         var syncModule = this;
 
-        console.log("Please enter your password");
+        console.log("We need some more info to continue...");
         prompt.start();
         prompt.get({
             properties: {
@@ -36,12 +38,19 @@ var NewmanSyncDownloader = jsface.Class({
                 password: {
                     description: "Password: ",
                     hidden: true
+                },
+
+                directory: {
+                    description: "Directory to which you want your collections to be saved",
+                    default: "/home"
                 }
             }
         }, function (err, result) {
+            syncModule.directory = result.directory;
             syncModule.beginFlow(syncModule.username, result.password);
         });
     },
+
 
     beginFlow: function(username, password) {
         var syncModule = this;
@@ -57,7 +66,7 @@ var NewmanSyncDownloader = jsface.Class({
             return;
         })
 
-            //Do Sync Auth
+            //Get collections for user
         .then(function(response) {
             console.log("Connecting to Postman Sync server..");
             var userId = response.user_id;
@@ -65,13 +74,25 @@ var NewmanSyncDownloader = jsface.Class({
             return syncModule.getUserCollectionsFromSync(userId, accessToken);
         })
 
+        .then(function(userId, collectionArray) {
+            return syncModule.deleteUserFiles(userId);
+        })
+
             //Get folders for collection, and requests for collection
-        .then(function(response) {
-                var collections = response.collections;
-                //this is an array
-                //for each collection, save to a file
-                //and trigger the getFolders and getRequests part
+        .then(function(userId, collectionArray) {
+            var numCollections = collectionArray.length;
+            for(var i=0;i<numCollections;i++) {
+                syncModule.saveCollection(userId, collectionArray[i]);
+            }
         });
+    },
+
+    deleteUserFiles: function(userId) {
+        return new Promise(function(resolve, reject) {
+    },
+
+    saveCollection: function(userId, collectionJson) {
+
     },
 
     /**
@@ -90,15 +111,25 @@ var NewmanSyncDownloader = jsface.Class({
                         resolve(body);
                     }
                 }
-            })
+            });
         });
     },
 
     getUserCollectionsFromSync: function(userId, accessToken) {
         return new Promise(function(resolve, reject) {
             //assume you've got the collections
-            var collections = [];
-            resolve(userId, collections);
+            request(syncModule.syncServerUrl + '/api/collection?user_id=' + userId, function (error, response, body) {
+                if (!error && response.statusCode == 200) {
+                    var collections = [];
+                    //pluck only the data field from each array elemeent
+                    resolve(userId, _und.pluck(body,'data'));
+                }
+                else {
+                    reject("Error getting collections");
+                }
+            });
+
+
         });
     }
 });

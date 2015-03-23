@@ -48,6 +48,7 @@
     "commander": "2.x.x",
     "crypto-js": "*",
     "dot": "1.0.3",
+    "fs-extra": "^0.16.5",
     "jquery": "2.1.1",
     "jsdom": "3.x.x",
     "jsface": "2.2.x",
