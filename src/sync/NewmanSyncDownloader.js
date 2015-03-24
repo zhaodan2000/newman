@@ -21,6 +21,7 @@ var NewmanSyncDownloader = jsface.Class({
     setDefaults: function() {
         this.postmanUrl = "https://getpostman.com";
         this.syncServerUrl = "https://sync-server.getpostman.com"
+        this.directoryRoot = '/home/';
     },
 
     begin: function() {
@@ -41,11 +42,15 @@ var NewmanSyncDownloader = jsface.Class({
                 },
 
                 directory: {
-                    description: "Directory to which you want your collections to be saved",
-                    default: "/home"
+                    description: "Directory to which you want your collections to be saved (folders called collections, environments, globals will be created here)",
+                    default: "/home/username"
                 }
             }
         }, function (err, result) {
+            if(err) {
+                console.log();
+                process.exit(1);
+            }
             syncModule.directory = result.directory;
             syncModule.beginFlow(syncModule.username, result.password);
         });
@@ -56,6 +61,7 @@ var NewmanSyncDownloader = jsface.Class({
         var syncModule = this;
         console.log("Connecting to Postman server...");
 
+        //get access token from postman server
         this.doPostmanAuth(username, password).then(function(response) {
             console.log("Authentication successful!");
             console.log(JSON.stringify(response));
@@ -63,36 +69,170 @@ var NewmanSyncDownloader = jsface.Class({
         }, function(error) {
             console.error("There was an error: " + error);
             console.error("Cannot continue :(");
-            return;
+            process.exit(1);
         })
 
-            //Get collections for user
-        .then(function(response) {
+        .then(function() {
+            console.log("Deleting old directory");
+            return syncModule.deleteUserFiles();
+        })
+        .catch(function(e) {
+            console.error("Error deleting directory: " + syncModule.directory);
+            console.error(JSON.stringify(e));
+            process.exit(1);
+        })
+
+        //Get collections for user
+        .then(function() {
             console.log("Connecting to Postman Sync server..");
-            var userId = response.user_id;
-            var accessToken = response.access_token;
+            var userId = syncModule.user_id;
+            var accessToken = syncModule.access_token;
             return syncModule.getUserCollectionsFromSync(userId, accessToken);
         })
-
-        .then(function(userId, collectionArray) {
-            return syncModule.deleteUserFiles(userId);
+        .catch(function(error) {
+            console.log("Could not get collections: " + error);
+            process.exit(1);
         })
 
-            //Get folders for collection, and requests for collection
-        .then(function(userId, collectionArray) {
+
+        //Get folders for collection, and requests for collection
+        .then(function(resolveObject) {
+            console.log("Resolved...");
+            var userId = resolveObject.userId;
+            var collectionArray = resolveObject.collectionArray;
             var numCollections = collectionArray.length;
+            var collectionPromises = [];
             for(var i=0;i<numCollections;i++) {
-                syncModule.saveCollection(userId, collectionArray[i]);
+                console.log("Saving collection");
+                //this will NOT return a promise
+                collectionPromises.push(syncModule.saveCollection(userId, collectionArray[i]));
             }
+            Promise.all(collectionPromises).then(function() {
+                console.log("All collections saved");
+            }); //something something (just print the message)
+        })
+
+        .catch(function() {
+            console.log("Something went wrong :(");
         });
     },
 
-    deleteUserFiles: function(userId) {
+    deleteUserFiles: function() {
+        var syncModule = this;
         return new Promise(function(resolve, reject) {
+            fs.remove(syncModule.directory, function(err) {
+                if (err) {
+                    console.log("Rejecting...");
+                    reject(err);
+                }
+                else {
+                    resolve();
+                }
+            });
+        });
     },
 
+    /**
+     * This needs to return a resolved promise when everything is done
+     * @param userId
+     * @param collectionJson
+     */
     saveCollection: function(userId, collectionJson) {
+        var syncModule = this;
 
+        return new Promise(function(cResolve, cReject) {
+            console.log("Save collection function for collection " + collectionJson.id);
+            var fp = syncModule.getFoldersForCollection(userId, collectionJson);
+            fp.then(function(resolveObject) {
+                console.log("Get folders for collection (" + resolveObject.collection.id+") resolved");
+                var userId = resolveObject.userId;
+                var folderArray = resolveObject.folderArray;
+                var numCollections = folderArray.length;
+                var collection = resolveObject.collection;
+                collectionJson.folders = folderArray;
+            })
+
+            var rp = syncModule.getRequestsForCollection(userId, collectionJson);
+            rp.then(function(resolveObject) {
+                console.log("Get requests for collection (" + resolveObject.collection.id+") resolved");
+                var requestArray = resolveObject.requestArray;
+                collectionJson.requests = requestArray;
+            });
+
+            Promise.all([fp, rp]).then(function() {
+                console.log("Savecollection (" + collectionJson.id+") resolved");
+                syncModule.saveCollectionToFile(collectionJson).then(function() {
+                    cResolve(collectionJson);
+                });
+            });
+        });
+    },
+
+    saveCollectionToFile: function(json)
+    {
+        var file = this.directory + '/collections/' + json.name;
+
+        fs.outputFile(file, JSON.stringify(json,null,2), function(err) {
+            if(err) {
+                console.log(err)
+            } // => null
+        });
+    },
+
+    getRequestsForCollection: function(userId, collectionJson) {
+        var syncModule = this;
+        return new Promise(function(resolve, reject) {
+            //assume you've got the collections
+            request(syncModule.syncServerUrl + '/api/request?user_id=' + userId + "&collection=" + collectionJson.id, function (error, response, body) {
+                if (!error && response.statusCode == 200) {
+                    //pluck only the data field from each array element
+                    try {
+                        body = JSON.parse(body);
+                        console.log("Requests (" + body.length + ") retrieved");
+                        var resolveObject = {
+                            userId: userId,
+                            requestArray: _und.pluck(body,'data'),
+                            collection: collectionJson
+                        };
+                        resolve(resolveObject);
+                    }
+                    catch(e) {
+                        reject("Error parsing JSON");
+                    }
+                }
+                else {
+                    reject("Error getting collections");
+                }
+            });
+        });
+    },
+
+    getFoldersForCollection: function(userId, collectionJson) {
+        var syncModule = this;
+        return new Promise(function(resolve, reject) {
+            //assume you've got the collections
+            request(syncModule.syncServerUrl + '/api/folder?user_id=' + userId + "&collection=" + collectionJson.id, function (error, response, body) {
+                if (!error && response.statusCode == 200) {
+                    //pluck only the data field from each array element
+                    try {
+                        body = JSON.parse(body);
+                        console.log("Folder (" + body.id + ") retrieved");
+                        var resolveObject = {
+                            userId: userId,
+                            folderArray: _und.pluck(body,'data'),
+                            collection: collectionJson
+                        };
+                        resolve(resolveObject);
+                    }
+                    catch(e) {
+                        reject("Error parsing JSON");
+                    }
+                }
+                else {
+                    reject("Error getting collections");
+                }
+            });
+        });
     },
 
     /**
@@ -108,6 +248,9 @@ var NewmanSyncDownloader = jsface.Class({
                         reject(body.message);
                     }
                     else if(body.result == "success") {
+                        syncModule.access_token = body.access_token;
+                        syncModule.user_id = body.user_id;
+                        syncModule.username = username;
                         resolve(body);
                     }
                 }
@@ -116,20 +259,28 @@ var NewmanSyncDownloader = jsface.Class({
     },
 
     getUserCollectionsFromSync: function(userId, accessToken) {
+        var syncModule = this;
         return new Promise(function(resolve, reject) {
             //assume you've got the collections
             request(syncModule.syncServerUrl + '/api/collection?user_id=' + userId, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
-                    var collections = [];
-                    //pluck only the data field from each array elemeent
-                    resolve(userId, _und.pluck(body,'data'));
+                    //pluck only the data field from each array element
+                    try {
+                        body = JSON.parse(body);
+                        var resolveObject = {
+                            userId: userId,
+                            collectionArray: _und.pluck(body,'data')
+                        };
+                        resolve(resolveObject);
+                    }
+                    catch(e) {
+                        reject("Error parsing JSON");
+                    }
                 }
                 else {
                     reject("Error getting collections");
                 }
             });
-
-
         });
     }
 });
