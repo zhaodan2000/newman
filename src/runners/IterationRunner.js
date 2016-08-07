@@ -213,7 +213,11 @@ var IterationRunner = jsface.Class([Options, EventEmitter], {
     },
 
     _exportResponses: function () {
-        ResponseExporter.exportResults();
+        var _options = this.getOptions();
+        ResponseExporter.exportResults(function (results) {
+
+            _options.results = results;
+        });
     },
 
     /**

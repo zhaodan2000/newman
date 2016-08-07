@@ -165,6 +165,7 @@ var ResponseExporter = jsface.Class({
                 "name": "",       // TODO: Fill these guys later on
                 "detail": ""
             },
+            "body":response.body,   //把结果传出来
             "tests": tests, //this is meaningless. preserved for backward-compat
             "totalPassFailCounts": totalPassFailCounts,
             "testPassFailCounts": passFailCounts, //this will hold results per test, across all iterations
@@ -236,8 +237,13 @@ var ResponseExporter = jsface.Class({
      * This function when called creates a file with the JSON of the results.
      * @memberOf ResponseExporter
      */
-    exportResults: function () {
+    exportResults: function (callback) {
         var exportVariable = this._createExportVariable();
+        //这里的exportVariable.results就是想要的数据
+        /**
+         * 在这里将exportVariable.results传入到newman.js的回调里
+         */
+        callback(exportVariable.results);
 
         //calculate mean time
         _und.each(exportVariable.results, function (result) {
@@ -246,6 +252,7 @@ var ResponseExporter = jsface.Class({
 
         if (Globals.outputFile) {
             var filepath = path.resolve(Globals.outputFile);
+            //这里的exportVariable.results就是想要的数据
             fs.writeFileSync(filepath, JSON.stringify(exportVariable, null, 4));
             log.note("\n\nOutput Log: " + filepath + "\n");
         }

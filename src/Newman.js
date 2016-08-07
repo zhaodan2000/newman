@@ -107,14 +107,14 @@ var Newman = jsface.Class([Options, EventEmitter], {
 
                 function wrapUp() {
                     //if -x is set, return the exit code
-                    if(options.exitCode) {
-                        callback(exitCode);
+                    if(options.exitCode && options.results) {
+                        callback(exitCode, options.results);
                     }
                     else if(options.stopOnError && exitCode===1) {
-                        callback(1);
+                        callback(1, options.results);
                     }
                     else {
-                        callback(0);
+                        callback(0, options.results);
                     }
                 }
 
