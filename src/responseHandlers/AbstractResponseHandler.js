@@ -27,13 +27,13 @@ var AbstractResponseHandler = jsface.Class([EventEmitter], {
     },
 
     // method to be over-ridden by the inheriting classes
-    _onRequestExecuted: function (error, response, body, request, tests) {
+    _onRequestExecuted: function (error, response, body, request, tests, exporter) {
         if (error) {
             ErrorHandler.requestError(request, error);
         } else {
             this._printResponse(error, response, body, request);
         }
-        ResponseExporter.addResult(request, response, tests);
+        exporter.addResult(request, response, tests);
     },
 
     _printResponse: function (error, response, body, request) {

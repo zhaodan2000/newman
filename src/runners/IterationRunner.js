@@ -22,6 +22,7 @@ var jsface = require("jsface"),
 var IterationRunner = jsface.Class([Options, EventEmitter], {
     constructor: function (requestJSON, options) {
         this.setOptions(options);
+        this.exporter = new ResponseExporter();
         this.collection = this._getOrderedCollection(requestJSON);
         this.collectionName = requestJSON.name;
         if (!Globals.requestJSON) {
@@ -207,14 +208,14 @@ var IterationRunner = jsface.Class([Options, EventEmitter], {
     _runCollection: function () {
         if (this.collection.length) {
             this._logStatus();
-            var runner = new CollectionRunner(this.collection, this.getOptions());
+            var runner = new CollectionRunner(this.collection, this.getOptions(), this.exporter);
             runner.execute();
         }
     },
 
     _exportResponses: function () {
         var _options = this.getOptions();
-        ResponseExporter.exportResults(function (results) {
+        this.exporter.exportResults(function (results) {
 
             _options.results = results;
         });

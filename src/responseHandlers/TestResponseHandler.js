@@ -23,7 +23,7 @@ require('sugar');
  * @classdesc
  */
 var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
-    $singleton: false,
+    $singleton: true,
     throwErrorOnLog: false,
     main: function () {
         jsdom.env("<html><body></body></html>", function (err, window) {
@@ -35,14 +35,15 @@ var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
     // function called when the event "requestExecuted" is fired. Takes 4 self-explanatory parameters
     _onRequestExecuted: function (error, response, body, request) {
         var results = this._runTestCases(error, response, body, request);
-        AbstractResponseHandler._onRequestExecuted.call(this, error, response, body, request, results);
+        var exporter = new ResponseExporter();
+        AbstractResponseHandler._onRequestExecuted.call(this, error, response, body, request, results, exporter);
         this._logTestResults(results);
 
         if (this.throwErrorOnLog !== false) {
-            var _options = this.getOptions();
-            ResponseExporter.exportResults(function (results) {
+            // var _options = this.getOptions();
+            exporter.exportResults(function (results) {
 
-                _options.results = results;
+                // _options.results = results;
             });
             ErrorHandler.terminateWithError(this.throwErrorOnLog);
         }

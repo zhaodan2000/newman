@@ -14,10 +14,11 @@ var HtmlExporter = jsface.Class({
         var template;
         //Always use existing file
         template = require('../templates/htmlResponseTemplate');
-        var htmlPath = Globals.html;
+        // var htmlPath = Globals.html;
         try {
-            fs.writeFileSync(htmlPath, template(resultObj));
-            log.note("\nHTML Report written to: " + htmlPath + "\n");
+            // fs.writeFileSync(htmlPath, template(resultObj));
+            // log.note("\nHTML Report written to: " + htmlPath + "\n");
+            return template(resultObj);
         }
         catch (e) {
             log.error("Error writing to file. Try using sudo. Error: " + (e.stack || e));

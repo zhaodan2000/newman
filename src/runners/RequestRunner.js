@@ -19,7 +19,10 @@ var jsface = require('jsface'),
  * @mixes EventEmitter , Queue
  */
 var RequestRunner = jsface.Class([Queue, EventEmitter], {
-    $singleton: true,
+    constructor: function (exporter) {
+        this.exporter = exporter;
+    },
+    $singleton: false,
 
     delay: 0,
     strictSSL: true,
@@ -196,7 +199,7 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
                 if (this.isEmptyQueue()) {
                     delay = 0;
                 }
-                this.emit('requestExecuted', error, response, body, request, delay);
+                this.emit('requestExecuted', error, response, body, request, delay, this.exporter);
             }.bind(this));
 
             this._setFormDataIfParamsInRequest(unireq, request);

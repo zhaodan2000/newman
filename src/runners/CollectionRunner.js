@@ -18,9 +18,10 @@ var jsface = require("jsface"),
  * @mixes Options
  */
 var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
-    constructor: function (collection, options) {
+    constructor: function (collection, options, exporter) {
         this.$class.$super.call(this, collection);
         this.setOptions(options);
+        this.exporter = exporter;
     },
 
     /**
@@ -28,6 +29,7 @@ var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
      * @memberOf CollectionRunner
      */
     execute: function () {
+        var requestRunner = new RequestRunner(this.exporter);
         // Initialize the response handler using a factory
         this.ResponseHandler = ResponseHandlerFactory.createResponseHandler(this.getOptions());
         if (!this.ResponseHandler) {
@@ -39,26 +41,26 @@ var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
         // Sets up the response handler to respond to the requestExecuted event
         this.ResponseHandler.initialize();
 
-        RequestRunner.resetIndex();
+        requestRunner.resetIndex();
         _und.each(this.collection, function (postmanRequest) {
-            RequestRunner.addRequest(postmanRequest);
+            requestRunner.addRequest(postmanRequest);
         }, this);
 
-        RequestRunner.setDelay(this.opts.delay);
+        requestRunner.setDelay(this.opts.delay);
 
         if (!isNaN(this.opts.requestTimeout) && this.opts.requestTimeout % 1 === 0) {
-            RequestRunner.setRequestTimeout(this.opts.requestTimeout);
+            requestRunner.setRequestTimeout(this.opts.requestTimeout);
         }
         else if (this.opts.requestTimeout == null) {
-            RequestRunner.setRequestTimeout(15000);
+            requestRunner.setRequestTimeout(15000);
         }
         else {
             Errors.terminateWithError('The request timeout must be an integer');
         }
 
-        RequestRunner.setStrictSSL(this.opts.strictSSL);
-        RequestRunner.setSecureProtocol(this.opts.secureProtocol);
-        RequestRunner.start();
+        requestRunner.setStrictSSL(this.opts.strictSSL);
+        requestRunner.setSecureProtocol(this.opts.secureProtocol);
+        requestRunner.start();
 
         this.$class.$superp.execute.call(this);
     },

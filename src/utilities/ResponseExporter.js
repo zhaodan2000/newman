@@ -12,7 +12,7 @@ var jsface = require('jsface'),
  * @classdesc Class Used for exporting the generated responses.
  */
 var ResponseExporter = jsface.Class({
-    $singleton: true,
+    $singleton: false,
 
     _results: [],
 
@@ -239,33 +239,35 @@ var ResponseExporter = jsface.Class({
      */
     exportResults: function (callback) {
         var exportVariable = this._createExportVariable();
-        //这里的exportVariable.results就是想要的数据
-        /**
-         * 在这里将exportVariable.results传入到newman.js的回调里
-         */
-        callback(exportVariable.results);
+
 
         //calculate mean time
         _und.each(exportVariable.results, function (result) {
             result.meanResponseTime = parseInt(result.totalTime, 10) / exportVariable.count;
         });
 
-        if (Globals.outputFile) {
-            var filepath = path.resolve(Globals.outputFile);
-            //这里的exportVariable.results就是想要的数据
-            fs.writeFileSync(filepath, JSON.stringify(exportVariable, null, 4));
-            log.note("\n\nOutput Log: " + filepath + "\n");
-        }
+        // if (Globals.outputFile) {
+        //     var filepath = path.resolve(Globals.outputFile);
+        //     //这里的exportVariable.results就是想要的数据
+        //     fs.writeFileSync(filepath, JSON.stringify(exportVariable, null, 4));
+        //     log.note("\n\nOutput Log: " + filepath + "\n");
+        // }
+        //
+        // if (Globals.testReportFile) {
+        //     var outputpath = path.resolve(Globals.testReportFile);
+        //     fs.writeFileSync(outputpath, this._createJunitXML());
+        //     log.note("\n\nJunit XML file written to: " + outputpath + "\n");
+        // }
 
-        if (Globals.testReportFile) {
-            var outputpath = path.resolve(Globals.testReportFile);
-            fs.writeFileSync(outputpath, this._createJunitXML());
-            log.note("\n\nJunit XML file written to: " + outputpath + "\n");
-        }
-
-        if (Globals.html) {
-            HtmlExporter.generateHTML(exportVariable);
-        }
+        // if (Globals.html) {
+        if(exportVariable)
+        exportVariable.html = HtmlExporter.generateHTML(exportVariable);
+        // }
+        //这里的exportVariable.results就是想要的数据
+        /**
+         * 在这里将exportVariable.results传入到newman.js的回调里
+         */
+        callback(exportVariable);
     },
 
     _aggregateTestResults: function (runs) {
