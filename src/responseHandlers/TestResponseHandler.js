@@ -25,7 +25,13 @@ require('sugar');
 var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
     $singleton: true,
     throwErrorOnLog: false,
-
+    _options : {},
+    setOptions: function(options) {
+        this._options = options;
+    },
+    getOptions: function(){
+        return this._options;
+    },
     main: function () {
         jsdom.env("<html><body></body></html>", function (err, window) {
             _jq = require('jquery')(window);
@@ -40,7 +46,11 @@ var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
         this._logTestResults(results);
 
         if (this.throwErrorOnLog !== false) {
-            ResponseExporter.exportResults();
+            var _options = this.getOptions();
+            ResponseExporter.exportResults(function (results) {
+
+                _options.results = results;
+            });
             ErrorHandler.terminateWithError(this.throwErrorOnLog);
         }
     },
