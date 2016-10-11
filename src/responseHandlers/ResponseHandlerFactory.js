@@ -27,7 +27,8 @@ var ResponseHandlerFactory = jsface.Class({
             var filePath = path.join(__dirname, options.responseHandler.split(".")[0] + '.js');
             try {
                 fs.statSync(filePath); // make sure the file exists
-                handler = new require(filePath)();
+                var handlerType = require(filePath);
+                handler = new handlerType();
                 handler.setOptions(options);
                 return handler;
             }
