@@ -25,13 +25,6 @@ require('sugar');
 var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
     $singleton: true,
     throwErrorOnLog: false,
-    _options : {},
-    setOptions: function(options) {
-        this._options = options;
-    },
-    getOptions: function(){
-        return this._options;
-    },
     main: function () {
         jsdom.env("<html><body></body></html>", function (err, window) {
             _jq = require('jquery')(window);
