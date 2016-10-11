@@ -14,4 +14,6 @@ var DefaultResponseHandler = jsface.Class(AbstractResponseHandler, {
     }
 });
 
-module.exports = DefaultResponseHandler;
+module.exports = function () {
+    return new DefaultResponseHandler();
+};
