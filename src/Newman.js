@@ -102,7 +102,7 @@ var Newman = jsface.Class([Options, EventEmitter], {
                     fs.writeFileSync(options.exportEnvironmentFile, JSON.stringify(Globals.envJson, null, 1));
                     log.note("\n\nEnvironment File Exported To: " + options.exportEnvironmentFile + "\n");
                 }
-                
+
                 self.removeAllListeners();
 
                 function wrapUp() {
