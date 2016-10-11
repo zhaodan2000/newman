@@ -130,5 +130,8 @@ var Newman = jsface.Class([Options, EventEmitter], {
         this.iterationRunner.execute();
     }
 });
+function newInstance(){
+    return new Newman();
+};
 
-module.exports = Newman;
+module.exports = newInstance();
