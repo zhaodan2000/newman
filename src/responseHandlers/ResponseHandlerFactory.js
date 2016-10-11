@@ -20,14 +20,14 @@ var ResponseHandlerFactory = jsface.Class({
     createResponseHandler: function (options) {
         var handler = null;
         if (options.responseHandler === undefined) {
-            handler = DefaultResponseHandler;
+            handler = new DefaultResponseHandler();
             handler.setOptions(options);
             return handler;
         } else {
             var filePath = path.join(__dirname, options.responseHandler.split(".")[0] + '.js');
             try {
                 fs.statSync(filePath); // make sure the file exists
-                handler = require(filePath);
+                handler = new require(filePath)();
                 handler.setOptions(options);
                 return handler;
             }

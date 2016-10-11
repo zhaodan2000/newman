@@ -380,6 +380,4 @@ var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
     }
 });
 
-module.exports = function () {
-    return new TestResponseHandler();
-};
+module.exports = TestResponseHandler;
