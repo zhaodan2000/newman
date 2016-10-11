@@ -17,7 +17,7 @@ var jsface = require("jsface"),
  * @namespace
  */
 var Newman = jsface.Class([Options, EventEmitter], {
-    $singleton: true,
+    $singleton: false,
 
     /**
      * Executes XHR Requests for the Postman request, and logs the responses
@@ -130,10 +130,5 @@ var Newman = jsface.Class([Options, EventEmitter], {
         this.iterationRunner.execute();
     }
 });
-var Init = function () {
-    this.newInstance = function() {
-        return new Newman();
-    }
-};
 
-module.exports = Init;
+module.exports = Newman;
