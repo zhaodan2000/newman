@@ -33,9 +33,8 @@ var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
 
 
     // function called when the event "requestExecuted" is fired. Takes 4 self-explanatory parameters
-    _onRequestExecuted: function (error, response, body, request) {
+    _onRequestExecuted: function (error, response, body, request, exporter) {
         var results = this._runTestCases(error, response, body, request);
-        var exporter = new ResponseExporter();
         AbstractResponseHandler._onRequestExecuted.call(this, error, response, body, request, results, exporter);
         this._logTestResults(results);
 
@@ -97,8 +96,8 @@ var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
         sweet += "for(p in sugar.date)  {if(p==='create'){Date.create=sugar.date.create} else{Date.prototype[p]= sugar.date[p];}}";
         sweet += "for(p in sugar.number) Number.prototype[p]= sugar.number[p];";
         sweet += "for(p in sugar.funcs) {" +
-                    "Object.defineProperty(Function.prototype, p, sugar.funcs[p]);" +
-                 "}";
+            "Object.defineProperty(Function.prototype, p, sugar.funcs[p]);" +
+            "}";
 
         var setEnvHack = "postman.setEnvironmentVariable = function(key,val) {postman.setEnvironmentVariableReal(key,val);environment[key]=val;};";
         setEnvHack += "postman.setGlobalVariable = function(key,val) {postman.setGlobalVariableReal(key,val);globals[key]=val;};";

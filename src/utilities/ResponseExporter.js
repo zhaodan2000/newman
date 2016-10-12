@@ -12,9 +12,10 @@ var jsface = require('jsface'),
  * @classdesc Class Used for exporting the generated responses.
  */
 var ResponseExporter = jsface.Class({
+    constructor: function (exporter) {
+        this._results = [];
+    },
     $singleton: false,
-
-    _results: [],
 
     //each element will be an object of type: {type:coll/folder, parentId, parentName, passCount, failCount}
     _summaryResults: [],
@@ -261,7 +262,7 @@ var ResponseExporter = jsface.Class({
 
         // if (Globals.html) {
         if(exportVariable)
-        exportVariable.html = HtmlExporter.generateHTML(exportVariable);
+            exportVariable.html = HtmlExporter.generateHTML(exportVariable);
         // }
         //这里的exportVariable.results就是想要的数据
         /**
