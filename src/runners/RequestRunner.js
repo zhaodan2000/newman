@@ -225,7 +225,7 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
 
   // clean up the requestrunner
   _destroy: function () {
-    this.removeEventListener('requestExecuted', this._bindedOnRequestHandlerExecuted);
+    this.removeEventListener('requestHandlerExecuted', this._bindedOnRequestHandlerExecuted);
     this.emit('requestRunnerOver');
   },
 

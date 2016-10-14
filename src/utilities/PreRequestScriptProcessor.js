@@ -43,8 +43,9 @@ var PreRequestScriptProcessor = jsface.Class({
         if (requestScript) {
             var sandbox = this._createSandboxedEnvironment(runner, request, callback);
             return this._runScript(request.preRequestScript, sandbox);
+        }else{
+          callback(runner, request);
         }
-        return {};
     },
 
     _getScriptForRequest: function (request) {

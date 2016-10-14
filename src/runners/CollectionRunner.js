@@ -30,7 +30,6 @@ var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
      */
     execute: function () {
         var requestRunner = new RequestRunner(this, function (runner) {
-          console.log('over');
           runner.$class.$superp.execute.call(this);
         });
         // Initialize the response handler using a factory
@@ -55,7 +54,7 @@ var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
             requestRunner.setRequestTimeout(this.opts.requestTimeout);
         }
         else if (this.opts.requestTimeout == null) {
-            requestRunner.setRequestTimeout(15000);
+            requestRunner.setRequestTimeout(30000);
         }
         else {
             Errors.terminateWithError('The request timeout must be an integer');

@@ -6,6 +6,7 @@
  */
 var crypto_util = require("./CryptoUtil");
 var mysql = require('mysql');
+var ErrorHandler = require("./ErrorHandler");
 
 var _mysql = function (ep) {
   var _ep = ep;
@@ -13,7 +14,12 @@ var _mysql = function (ep) {
     if (options['callback']) {
       _ep.addlength(1);
       options['_callback'] = function (results) {
-        options['callback'](results);
+        try{
+          options['callback'](results);
+        }
+        catch(err){
+          ErrorHandler.exceptionError(err);
+        }
         _ep.emit('1');
       };
     }
