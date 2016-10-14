@@ -6,6 +6,8 @@ var jsface = require('jsface'),
     _jq = null,
     _lod = require("lodash"),
     Helpers = require('./Helpers'),
+    MysqlHelper = require('./MysqlHelper'),
+    EventProxyHelper = require('./EventProxyHelper'),
     Backbone = require("backbone"),
     CryptoJS = require('crypto-js'),
     xmlToJson = require("xml2js"),
@@ -36,10 +38,10 @@ var PreRequestScriptProcessor = jsface.Class({
      * It's the responsibility of the CALLER to save and restore the original global state
      * @param {Object} request: the request object
      */
-    runPreRequestScript: function (request) {
+    runPreRequestScript: function (runner, request, callback) {
         var requestScript = this._getScriptForRequest(request);
         if (requestScript) {
-            var sandbox = this._createSandboxedEnvironment(request);
+            var sandbox = this._createSandboxedEnvironment(runner, request, callback);
             return this._runScript(request.preRequestScript, sandbox);
         }
         return {};
@@ -68,12 +70,12 @@ var PreRequestScriptProcessor = jsface.Class({
                  "}";
 
         //to ensure that environment. and global. references are updated
-        var setEnvHack = "postman.setEnvironmentVariable = function(key,val) {postman.setEnvironmentVariableReal(key,val);environment[key]=val;};";
-        setEnvHack += "postman.setGlobalVariable = function(key,val) {postman.setGlobalVariableReal(key,val);globals[key]=val;};";
-        setEnvHack += "postman.clearGlobalVariable = function(key) {postman.clearGlobalVariableReal(key);delete globals[key];};";
-        setEnvHack += "postman.clearEnvironmentVariable = function(key) {postman.clearEnvironmentVariableReal(key);delete environment[key];};";
-        setEnvHack += "postman.clearGlobalVariables = function() {postman.clearGlobalVariablesReal();globals={};};";
-        setEnvHack += "postman.clearEnvironmentVariables = function() {postman.clearEnvironmentVariablesReal();environment={};};";
+        var setEnvHack = "setEnvVar = function(key,val) {postman.setEnvironmentVariableReal(key,val);environment[key]=val;};";
+        setEnvHack += "setGlobalVar = function(key,val) {postman.setGlobalVariableReal(key,val);globals[key]=val;};";
+        setEnvHack += "clearGlobalVar = function(key) {postman.clearGlobalVariableReal(key);delete globals[key];};";
+        setEnvHack += "clearEnvVar = function(key) {postman.clearEnvironmentVariableReal(key);delete environment[key];};";
+        setEnvHack += "clearGlobalVars = function() {postman.clearGlobalVariablesReal();globals={};};";
+        setEnvHack += "clearEnvVars = function() {postman.clearEnvironmentVariablesReal();environment={};};";
 
         //to ensure that JSON.parse throws the right error
         setEnvHack += '(function () {                               \
@@ -88,7 +90,15 @@ var PreRequestScriptProcessor = jsface.Class({
         };                                                          \
         }());';
 
-        requestScript = sweet + 'String.prototype.has = function(value){ return this.indexOf(value) > -1};' + setEnvHack + requestScript;
+        var ep = 'if (ep.getLength() > 0) {                         \
+          ep.after(ep.getLength(), function () {                      \
+            callback(runner, originalReq);                                     \
+          });                                                         \
+        } else {                                                      \
+          callback(runner, originalReq);                                       \
+        }';
+
+        requestScript = sweet + 'String.prototype.has = function(value){ return this.indexOf(value) > -1};' + setEnvHack + requestScript + ep;
 
         try {
             vm.runInNewContext(requestScript, sandbox);
@@ -128,7 +138,7 @@ var PreRequestScriptProcessor = jsface.Class({
         return transformedData;
     },
 
-    _createSandboxedEnvironment: function (request) {
+    _createSandboxedEnvironment: function (runner, request, callback) {
         var sugar = { array: {}, object: {}, string: {}, funcs: {}, date: {}, number: {} };
         Object.extend();
         Object.getOwnPropertyNames(Array.prototype).each(function (p) {
@@ -153,6 +163,7 @@ var PreRequestScriptProcessor = jsface.Class({
         Object.getOwnPropertyNames(Function.prototype).each(function(p) {
             sugar.funcs[p] = Object.getOwnPropertyDescriptor(Function.prototype, p);
         });
+        var _ep = EventProxyHelper.create();
         return {
             sugar: sugar,
             request: {
@@ -164,6 +175,8 @@ var PreRequestScriptProcessor = jsface.Class({
                 name: request.name,
                 description: request.description
             },
+            ep: _ep,
+            mysql: MysqlHelper.create(_ep),
             iteration: Globals.iterationNumber,
             environment: this._setEnvironmentContext(),
             globals: this._setGlobalContext(),
@@ -278,7 +291,10 @@ var PreRequestScriptProcessor = jsface.Class({
                 setNextRequest: function (requestName) {
                     Globals.nextRequestName = requestName;
                 }
-            }
+            },
+            runner: runner,
+            originalReq: request,
+            callback: callback
         };
     }
 });

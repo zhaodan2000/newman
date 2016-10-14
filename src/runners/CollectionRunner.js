@@ -29,7 +29,10 @@ var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
      * @memberOf CollectionRunner
      */
     execute: function () {
-        var requestRunner = new RequestRunner(this.exporter);
+        var requestRunner = new RequestRunner(this, function (runner) {
+          console.log('over');
+          runner.$class.$superp.execute.call(this);
+        });
         // Initialize the response handler using a factory
         this.ResponseHandler = ResponseHandlerFactory.createResponseHandler(this.getOptions());
         if (!this.ResponseHandler) {
@@ -61,8 +64,6 @@ var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
         requestRunner.setStrictSSL(this.opts.strictSSL);
         requestRunner.setSecureProtocol(this.opts.secureProtocol);
         requestRunner.start();
-
-        this.$class.$superp.execute.call(this);
     },
 
     // adding event listeners to signal end of requestRunner and collectionRunner
