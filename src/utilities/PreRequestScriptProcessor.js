@@ -106,6 +106,7 @@ var PreRequestScriptProcessor = jsface.Class({
         } catch (err) {
             ErrorHandler.exceptionError(err);
         }
+        sandbox.callback(sandbox.runner, sandbox.originalReq);
         //what do we return??
         //return sandbox.tests;
     },
