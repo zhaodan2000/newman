@@ -241,7 +241,6 @@ var TestResponseHandler = jsface.Class(AbstractResponseHandler, {
       tests: {},
       error: null,
       responseHeaders: Helpers.createProperCasedHeaderObject(response.headers),
-      jsonData:{},
       responseBody: body,
       responseTime: response.stats.timeTaken,
       request: {
