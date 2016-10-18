@@ -29,6 +29,7 @@ var Newman = jsface.Class([Options, EventEmitter], {
     execute: function(requestJSON, options, callback) {
         var checking = false,
             onChecked = null,
+            globals = new Globals();
             self = this;
         // var collectionParseError = Validator.validateJSON('c',requestJSON);
         // if(!collectionParseError.status) {
@@ -76,11 +77,11 @@ var Newman = jsface.Class([Options, EventEmitter], {
             exec("npm show newman version", {timeout:1500}, function(error, stdout, stderr) {
                 checking = false;
                 stdout = stdout.trim();
-                if (stdout !== Globals.newmanVersion && stdout.length > 0) {
-                    Globals.updateMessage = "\nINFO: Newman v" + stdout + " is available. Use `npm update -g newman` to update.\n";
+                if (stdout !== globals.newmanVersion && stdout.length > 0) {
+                    globals.updateMessage = "\nINFO: Newman v" + stdout + " is available. Use `npm update -g newman` to update.\n";
                 }
                 else {
-                    Globals.updateMessage = "";
+                    globals.updateMessage = "";
                 }
                 if(typeof onChecked==='function') {
                     onChecked();
@@ -88,18 +89,18 @@ var Newman = jsface.Class([Options, EventEmitter], {
             });
         }
 
-        Globals.addEnvironmentGlobals(requestJSON, options);
+        globals.addEnvironmentGlobals(requestJSON, options);
         this.setOptions(options);
 
         if (typeof callback === "function") {
             this.addEventListener('iterationRunnerOver', function (exitCode) {
                 if (options.exportGlobalsFile) {
-                    fs.writeFileSync(options.exportGlobalsFile, JSON.stringify(Globals.globalJson.values, null, 1));
+                    fs.writeFileSync(options.exportGlobalsFile, JSON.stringify(globals.globalJson.values, null, 1));
                     log.note("\n\nGlobals File Exported To: " + options.exportGlobalsFile + "\n");
                 }
 
                 if (options.exportEnvironmentFile) {
-                    fs.writeFileSync(options.exportEnvironmentFile, JSON.stringify(Globals.envJson, null, 1));
+                    fs.writeFileSync(options.exportEnvironmentFile, JSON.stringify(globals.envJson, null, 1));
                     log.note("\n\nEnvironment File Exported To: " + options.exportEnvironmentFile + "\n");
                 }
 
@@ -126,7 +127,7 @@ var Newman = jsface.Class([Options, EventEmitter], {
             });
         }
 
-        this.iterationRunner = new IterationRunner(requestJSON, this.getOptions());
+        this.iterationRunner = new IterationRunner(requestJSON, this.getOptions(), globals);
         this.iterationRunner.execute();
     }
 });

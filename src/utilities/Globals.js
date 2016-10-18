@@ -7,7 +7,7 @@ var packageVersion = require('../../package.json').version;
  * @classdesc Globals to be used throught Newman.
  */
 var Globals = jsface.Class({
-    $singleton: true,
+    $singleton: false,
 
     newmanVersion: packageVersion,
 

@@ -20,15 +20,15 @@ var jsface = require("jsface"),
  * @param numOfIterations {int} Number of times the iteration has to run
  */
 var IterationRunner = jsface.Class([Options, EventEmitter], {
-    constructor: function (requestJSON, options) {
+    constructor: function (requestJSON, options, globals) {
         this.setOptions(options);
-        this.exporter = new ResponseExporter();
+        this.exporter = new ResponseExporter(globals);
         this.collection = this._getOrderedCollection(requestJSON);
         this.collectionName = requestJSON.name;
-        if (!Globals.requestJSON) {
-            Globals.requestJSON = requestJSON;
+        if (!globals.requestJSON) {
+            globals.requestJSON = requestJSON;
         }
-
+        this.globals = globals;
         //check if only a folder has to be run
         if (options.folderName) {
             this.folder = this._getFolderFromCollection(requestJSON, options.folderName);
@@ -116,22 +116,22 @@ var IterationRunner = jsface.Class([Options, EventEmitter], {
 
     // sets the global environment object property as the env vars + globals + dataFiles
     _setGlobalEnvJson: function () {
-        if (typeof Globals.envJson.values === "undefined") {
-            Globals.envJson.values = [];
+        if (typeof this.globals.envJson.values === "undefined") {
+            this.globals.envJson.values = [];
         }
 
         //add the globals (globalJSON, overriden by envJson)
         if (this.globalVars && this.globalVars.length) {
-            Globals.globalJson.values = this.globalVars;//Helpers.augmentDataArrays(this.globalVars,Globals.envJson.values);
+            this.globals.globalJson.values = this.globalVars;//Helpers.augmentDataArrays(this.globalVars,Globals.envJson.values);
         }
         else {
-            Globals.globalJson = { values: [] };
+            this.globals.globalJson = { values: [] };
         }
 
         //add the dataFile vars (overrides everything else)
         if (this.dataVars.length) {
             var dataJson = { values: this.dataVars[this.iteration - 1] }; //data file
-            Globals.dataJson.values = dataJson.values;
+            this.globals.dataJson.values = dataJson.values;
         }
     },
 
@@ -189,18 +189,18 @@ var IterationRunner = jsface.Class([Options, EventEmitter], {
     // set the global envjson and then run the next iteration
     _runNextIteration: function () {
         if (this.iteration < this.numOfIterations) {
-            Globals.iterationNumber = ++this.iteration;
-            Globals.dataJson = { "values": [] };
-            var currentGlobalEnv = Globals.envJson;
+            this.globals.iterationNumber = ++this.iteration;
+            this.globals.dataJson = { "values": [] };
+            var currentGlobalEnv = this.globals.envJson;
             this._setGlobalEnvJson();
             this._runCollection();
-            Globals.envJson = currentGlobalEnv;
-            Globals.nextRequestName = undefined;
+            this.globals.envJson = currentGlobalEnv;
+            this.globals.nextRequestName = undefined;
         } else {
             this._exportResponses();
-            this.emit('iterationRunnerOver', Globals.exitCode);
-            if (Globals.updateMessage) {
-                console.log(Globals.updateMessage);
+            this.emit('iterationRunnerOver', this.globals.exitCode);
+            if (this.globals.updateMessage) {
+                console.log(this.globals.updateMessage);
             }
         }
     },
@@ -208,7 +208,7 @@ var IterationRunner = jsface.Class([Options, EventEmitter], {
     _runCollection: function () {
         if (this.collection.length) {
             this._logStatus();
-            var runner = new CollectionRunner(this.collection, this.getOptions(), this.exporter);
+            var runner = new CollectionRunner(this.collection, this.getOptions(), this.exporter, this.globals);
             runner.execute();
         }
     },

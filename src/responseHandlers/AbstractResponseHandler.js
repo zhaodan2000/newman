@@ -33,7 +33,7 @@ var AbstractResponseHandler = jsface.Class([EventEmitter], {
         } else {
             this._printResponse(error, response, body, request);
         }
-        exporter.addResult(request, response, tests);
+        exporter.addResult(request, response, tests, error);
     },
 
     _printResponse: function (error, response, body, request) {

@@ -3,6 +3,7 @@ var jsface = require("jsface"),
     RequestRunner = require("./RequestRunner"),
     ResponseHandlerFactory = require('../responseHandlers/ResponseHandlerFactory'),
     Errors = require('../utilities/ErrorHandler'),
+    Globals = require('../utilities/Globals'),
     _und = require('underscore'),
     log = require('../utilities/Logger'),
     EventEmitter = require('../utilities/EventEmitter'),
@@ -18,10 +19,11 @@ var jsface = require("jsface"),
  * @mixes Options
  */
 var CollectionRunner = jsface.Class([AbstractRunner, Options, EventEmitter], {
-    constructor: function (collection, options, exporter) {
+    constructor: function (collection, options, exporter, globals) {
         this.$class.$super.call(this, collection);
         this.setOptions(options);
         this.exporter = exporter;
+        this.globals = globals;
     },
 
     /**

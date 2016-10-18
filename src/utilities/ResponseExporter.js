@@ -12,8 +12,9 @@ var jsface = require('jsface'),
  * @classdesc Class Used for exporting the generated responses.
  */
 var ResponseExporter = jsface.Class({
-    constructor: function (exporter) {
+    constructor: function (globals) {
         this._results = [];
+        this.globals = globals;
     },
     $singleton: false,
 
@@ -27,12 +28,12 @@ var ResponseExporter = jsface.Class({
      * @param {Object} tests Test Results.
      * @memberOf ResponseExporter
      */
-    addResult: function (request, response, tests) {
+    addResult: function (request, response, tests, error) {
         var result = this._findResultObject(request);
         if (result) {
-            this._appendToResultsObject(result, request, response, tests);
+            this._appendToResultsObject(result, request, response, tests, error);
         } else {
-            result = this._createResultObject(request, response, tests);
+            result = this._createResultObject(request, response, tests, error);
             this._results.push(result);
         }
         this.summarizeResults(request, tests);
@@ -148,7 +149,7 @@ var ResponseExporter = jsface.Class({
     },
 
     // Used to create a first result object, to be used while exporting the results.
-    _createResultObject: function (request, response, tests) {
+    _createResultObject: function (request, response, tests, error) {
         if (!tests) {
             tests = {};
         }
@@ -172,6 +173,7 @@ var ResponseExporter = jsface.Class({
             "testPassFailCounts": passFailCounts, //this will hold results per test, across all iterations
             "times": [],			// Not sure what to do with this guy
             "allTests": [tests],
+            "error": error, // 添加异常信息
             "time": response.stats.timeTaken //this is per request
         };
     },
@@ -182,8 +184,8 @@ var ResponseExporter = jsface.Class({
             }) || null;
     },
 
-    _appendToResultsObject: function (result, request, response, tests) {
-        var newResultObject = this._createResultObject(request, response, tests);
+    _appendToResultsObject: function (result, request, response, tests, error) {
+        var newResultObject = this._createResultObject(request, response, tests, error);
         newResultObject.totalTime += result.totalTime;
         this._mergeTestCounts(newResultObject, result);
         newResultObject.allTests = newResultObject.allTests.concat(result.allTests);
@@ -204,6 +206,7 @@ var ResponseExporter = jsface.Class({
             }
             oldResult.totalPassFailCounts.pass += thisResult.testPassFailCounts[testName].pass;
             oldResult.totalPassFailCounts.fail += thisResult.testPassFailCounts[testName].fail;
+            oldResult.error = oldResult.error || thisResult.error;
         });
     },
 
@@ -311,7 +314,7 @@ var ResponseExporter = jsface.Class({
     _createJunitXML: function () {
         var oldThis = this;
         var xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        var suitesName = Globals.requestJSON.name || 'Collection name not found';
+        var suitesName = this.globals.requestJSON.name || 'Collection name not found';
         xml += "<testsuites name=\"" + suitesName + "\">\n";
         _und.each(this._results, function (suite) {
             //var testRequest = _und.find(Globals.requestJSON.requests, function(request) {
@@ -364,18 +367,18 @@ var ResponseExporter = jsface.Class({
             id: '',
             name: 'Default',
             timestamp: new Date().getTime(),
-            collection_id: Globals.requestJSON.id,
+            collection_id: this.globals.requestJSON.id,
             folder_id: 0,
-            target_type: (Globals.folder) ? 'folder' : 'collection',
-            environment_id: Globals.envJson.id,
-            count: parseInt(Globals.iterationCount, 10),
-            collection: Globals.requestJSON,
-            folder: Globals.folder || null,
-            globals: Globals.globalJson,
+            target_type: (this.globals.folder) ? 'folder' : 'collection',
+            environment_id: this.globals.envJson.id,
+            count: parseInt(this.globals.iterationCount, 10),
+            collection: this.globals.requestJSON,
+            folder: this.globals.folder || null,
+            globals: this.globals.globalJson,
             results: this._results,
-            environment: Globals.envJson,
+            environment: this.globals.envJson,
             delay: 0,
-            synced: Globals.requestJSON.synced
+            synced: this.globals.requestJSON.synced
         };
     }
 });

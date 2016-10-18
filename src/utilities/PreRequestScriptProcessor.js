@@ -93,10 +93,10 @@ var PreRequestScriptProcessor = jsface.Class({
 
         var ep = 'if (ep.getLength() > 0) {                         \
           ep.after(ep.getLength(), function () {                      \
-            callback(runner, originalReq);                                     \
+            callback(runner, originalReq, error);                                     \
           });                                                         \
         } else {                                                      \
-          callback(runner, originalReq);                                       \
+          callback(runner, originalReq, error);                                       \
         }';
 
         requestScript = sweet + 'String.prototype.has = function(value){ return this.indexOf(value) > -1};' + setEnvHack + requestScript + ep;
@@ -104,26 +104,27 @@ var PreRequestScriptProcessor = jsface.Class({
         try {
             vm.runInNewContext(requestScript, sandbox);
         } catch (err) {
+            sandbox.error = err;
             ErrorHandler.exceptionError(err);
+            sandbox.callback(sandbox.runner, sandbox.originalReq, sandbox.error);
         }
-        sandbox.callback(sandbox.runner, sandbox.originalReq);
         //what do we return??
         //return sandbox.tests;
     },
 
     // sets the env vars json as a key value pair
-    _setEnvironmentContext: function () {
-        return Helpers.transformFromKeyValue(Globals.envJson.values);
+    _setEnvironmentContext: function (globals) {
+        return Helpers.transformFromKeyValue(globals.envJson.values);
     },
 
     // sets the global vars json as a key value pair
-    _setGlobalContext: function () {
-        return Helpers.transformFromKeyValue(Globals.globalJson.values);
+    _setGlobalContext: function (globals) {
+        return Helpers.transformFromKeyValue(globals.globalJson.values);
     },
 
     // sets the data vars json as a key value pair
-    _setDataContext: function () {
-        return Helpers.transformFromKeyValue(Globals.dataJson.values);
+    _setDataContext: function (globals) {
+        return Helpers.transformFromKeyValue(globals.dataJson.values);
     },
 
     _getTransformedRequestData: function (request) {
@@ -168,7 +169,9 @@ var PreRequestScriptProcessor = jsface.Class({
         var _ep = EventProxyHelper.create();
         return {
             sugar: sugar,
+            error: null,
             request: {
+                id: request.id,
                 url: request.transformed.url,
                 method: request.method,
                 headers: Helpers.generateHeaderObj(request.transformed.headers),
@@ -179,10 +182,10 @@ var PreRequestScriptProcessor = jsface.Class({
             },
             ep: _ep,
             mysql: MysqlHelper.create(_ep),
-            iteration: Globals.iterationNumber,
-            environment: this._setEnvironmentContext(),
-            globals: this._setGlobalContext(),
-            data: this._setDataContext(),
+            iteration: runner.globals.iterationNumber,
+            environment: this._setEnvironmentContext(runner.globals),
+            globals: this._setGlobalContext(runner.globals),
+            data: this._setDataContext(runner.globals),
             $: _jq,
             jQuery: _jq,
             _: _lod,
@@ -211,14 +214,14 @@ var PreRequestScriptProcessor = jsface.Class({
             },
             postman: {
                 setEnvironmentVariableReal: function (key, value) {
-                    var envVar = _und.find(Globals.envJson.values, function (envObject) {
+                    var envVar = _und.find(runner.globals.envJson.values, function (envObject) {
                         return envObject["key"] === key;
                     });
 
                     if (envVar) { // if the envVariable exists replace it
                         envVar["value"] = value;
                     } else { // else add a new envVariable
-                        Globals.envJson.values.push({
+                        runner.globals.envJson.values.push({
                             key: key,
                             value: value,
                             type: "text",
@@ -227,7 +230,7 @@ var PreRequestScriptProcessor = jsface.Class({
                     }
                 },
                 getEnvironmentVariable: function (key) {
-                    var envVar = _und.find(Globals.envJson.values, function (envObject) {
+                    var envVar = _und.find(runner.globals.envJson.values, function (envObject) {
                         return envObject["key"] === key;
                     });
                     if (envVar) {
@@ -236,14 +239,14 @@ var PreRequestScriptProcessor = jsface.Class({
                     return null;
                 },
                 clearEnvironmentVariablesReal: function () {
-                    Globals.envJson.values = [];
+                    runner.globals.envJson.values = [];
                 },
                 clearEnvironmentVariableReal: function (key) {
-                    var oldLength = Globals.envJson.values.length;
-                    _lod.remove(Globals.envJson.values, function (envObject) {
+                    var oldLength = runner.globals.envJson.values.length;
+                    _lod.remove(runner.globals.envJson.values, function (envObject) {
                         return envObject["key"] === key;
                     });
-                    if (oldLength === Globals.envJson.values.length) {
+                    if (oldLength === runner.globals.envJson.values.length) {
                         return false;
                     }
                     else {
@@ -251,14 +254,14 @@ var PreRequestScriptProcessor = jsface.Class({
                     }
                 },
                 setGlobalVariableReal: function (key, value) {
-                    var envVar = _und.find(Globals.globalJson.values, function (envObject) {
+                    var envVar = _und.find(runner.globals.globalJson.values, function (envObject) {
                         return envObject["key"] === key;
                     });
 
                     if (envVar) { // if the envVariable exists replace it
                         envVar["value"] = value;
                     } else { // else add a new envVariable
-                        Globals.globalJson.values.push({
+                        runner.globals.globalJson.values.push({
                             key: key,
                             value: value,
                             type: "text",
@@ -267,7 +270,7 @@ var PreRequestScriptProcessor = jsface.Class({
                     }
                 },
                 getGlobalVariable: function (key) {
-                    var envVar = _und.find(Globals.globalJson.values, function (envObject) {
+                    var envVar = _und.find(runner.globals.globalJson.values, function (envObject) {
                         return envObject["key"] === key;
                     });
                     if (envVar) {
@@ -276,14 +279,14 @@ var PreRequestScriptProcessor = jsface.Class({
                     return null;
                 },
                 clearGlobalVariablesReal: function () {
-                    Globals.globalJson.values = [];
+                    runner.globals.globalJson.values = [];
                 },
                 clearGlobalVariableReal: function (key) {
-                    var oldLength = Globals.globalJson.values.length;
-                    _lod.remove(Globals.globalJson.values, function (envObject) {
+                    var oldLength = runner.globals.globalJson.values.length;
+                    _lod.remove(runner.globals.globalJson.values, function (envObject) {
                         return envObject["key"] === key;
                     });
-                    if (oldLength === Globals.globalJson.values.length) {
+                    if (oldLength === runner.globals.globalJson.values.length) {
                         return false;
                     }
                     else {
@@ -291,7 +294,7 @@ var PreRequestScriptProcessor = jsface.Class({
                     }
                 },
                 setNextRequest: function (requestName) {
-                    Globals.nextRequestName = requestName;
+                    runner.globals.nextRequestName = requestName;
                 }
             },
             runner: runner,

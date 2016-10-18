@@ -24,6 +24,7 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
     this._runner = runner;
     this.exporter = runner.exporter;
     this.callback = callback;
+    this.globals = runner.globals;
   },
   $singleton: false,
 
@@ -117,31 +118,31 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
   },
 
   _getNextRequest: function () {
-    if (Globals.nextRequestName === undefined) {
+    if (this.globals.nextRequestName === undefined) {
       //will get the next item based on the index saved in the queue
       return this.getNextItemFromQueue();
     }
-    else if (Globals.nextRequestName === null) {
+    else if (this.globals.nextRequestName === null) {
       return null;
     }
     else {
       var queue = this.getAllItems();
       var indexToUse = -1;
       for (var i = 0; i < queue.length; i++) {
-        if (queue[i].name === Globals.nextRequestName) {
+        if (queue[i].name === this.globals.nextRequestName) {
           indexToUse = i;
           break;
         }
       }
       var requestToSend = this.getItemWithIndexWithoutRemoval(indexToUse);
-      Globals.nextRequestName = undefined;
+      this.globals.nextRequestName = undefined;
       return requestToSend;
     }
   },
 
   // Gets a request from the queue and executes it.
   _execute: function (_runner, callback) {
-    if (Globals.exitCode === 1 && Globals.stopOnError === true) {
+    if (this.globals.exitCode === 1 && this.globals.stopOnError === true) {
       return;
     }
 
@@ -165,7 +166,7 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
 
       //to add Environment and Data variables to the request, because the processed URL is available in the PR script
       this._processUrlUsingEnvVariables(request);
-      var callback = function (runner, originalReq) {
+      var callback = function (runner, originalReq, _error) {
         //to process PreoriginalReqScript variables
         runner._processUrlUsingEnvVariables(originalReq);
 
@@ -206,6 +207,7 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
           // runner.ep.after(1, function () {
           //
           // });
+          error = error || _error;
           runner.emit('requestExecuted', error, response, body, originalReq, runner, delay);
         }.bind(runner));
 
@@ -243,12 +245,12 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
     RequestOptions.url = request.transformed.url;
     RequestOptions.method = request.method;
     RequestOptions.headers = Helpers.generateHeaderObj(request.transformed.headers);
-    RequestOptions.followAllRedirects = !Globals.avoidRedirects;
-    RequestOptions.followRedirect = !Globals.avoidRedirects;
+    RequestOptions.followAllRedirects = !this.globals.avoidRedirects;
+    RequestOptions.followRedirect = !this.globals.avoidRedirects;
     RequestOptions.jar = true;
     RequestOptions.timeout = this.requestTimeout;
-    if (Globals.responseEncoding) {
-      RequestOptions.encoding = Globals.responseEncoding;
+    if (this.globals.responseEncoding) {
+      RequestOptions.encoding = this.globals.responseEncoding;
     }
     RequestOptions.gzip = true;
     this._setBodyData(RequestOptions, request);
@@ -321,8 +323,8 @@ var RequestRunner = jsface.Class([Queue, EventEmitter], {
 
   _processUrlUsingEnvVariables: function (request) {
     var mergedArray = {"values": []};
-    mergedArray.values = Helpers.augmentDataArrays(Globals.globalJson.values, Globals.envJson.values);
-    mergedArray.values = Helpers.augmentDataArrays(mergedArray.values, Globals.dataJson.values);
+    mergedArray.values = Helpers.augmentDataArrays(this.globals.globalJson.values, this.globals.envJson.values);
+    mergedArray.values = Helpers.augmentDataArrays(mergedArray.values, this.globals.dataJson.values);
 
     VariableProcessor.processRequestVariables(request, {
       envJson: mergedArray
